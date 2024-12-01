@@ -1,5 +1,5 @@
 package utils
-import scala.util._
+import scala.util._, boundary.break
 import scala.math._
 import scala.util.matching._
 import scala.util.matching.Regex.Match
@@ -7,8 +7,9 @@ import scala.collection.mutable.{ArrayBuffer, HashMap}
 import os._
 import scala.compiletime.ops.string
 
-/** collection of useful utility methods & shorthands
-  */
+/**
+ * collection of useful utility methods & shorthands
+ */
 object Utils:
   type Bool = Boolean
   // alphanbetic regex shorthand
@@ -18,6 +19,7 @@ object Utils:
   type Range = (Long, Long) | Unit
   import Range.*
   extension (r: Range)
+    def isEmpty = r == ()
     def _1 = r match
       case ()     => throw Exception("get in empty range")
       case (a, b) => a
@@ -67,70 +69,69 @@ object Utils:
   extension (sur: Surrounding)
     def bound(a: Int, b: Int): Surrounding =
       sur.filter((i, j) => i >= 0 && i < a && j >= 0 && j < b)
+
   // modulo using the sign of the divisor
   extension (x: Int) def +%(y: Int)        = Math.floorMod(x, y)
   extension (x: Long) def +%(y: Long): Int = Math.floorMod(x, y).toInt
 
-  extension [T, U](p: (T, U))
-    def bimap(f: T => U, g: U => T) = (f(p._1), g(p._2))
+  extension [T, U, V, W](p: (T, U)) def bimap(f: T => V, g: U => W) = (f(p._1), g(p._2))
 
-  // exponentiation
+  // exponentiation shorthand
   extension (n: Double) def **(m: Double) = Math.pow(n, m)
 
-  /** performs extended euclidean algorithm on a and b to find GCD
-    *
-    * @param a
-    *   integer input 1
-    * @param b
-    *   integer input 2
-    * @return
-    *   triplet (g,x,y) such that g = a*x + b*y
-    */
+  /**
+   * performs extended euclidean algorithm on a and b to find GCD
+   *
+   * @param a integer input 1
+   * @param b integer input 2
+   * @return triplet (g,x,y) such that g = a*x + b*y
+   */
   def egcd(a: Int, b: Int): (Int, Int, Int) =
     if a == 0 then (b, 0, 1)
     else
       val (g, x, y) = egcd(b % a, a)
       (g, y - (b / a) * x, x)
+
+  /** computes multiplicative inverse of a mod m */
   def modInv(a: Int, m: Int): Int =
     val (g, x, y) = egcd(a, m)
     if g == 1 then (x + m) % m else 0
 
+  /** basic primality check for a number ~ O(n^0.5) */
   def isPrime(n: BigInt): Boolean =
     if n < 2 then return false
-    for i <- 2 to math.sqrt(n.toDouble).toInt do if n % i == 0 then return false
-    true
+    boundary:
+      for i <- 2 to math.sqrt(n.toDouble).toInt do if n % i == 0 then break(false)
+      true
 
   // random string stuff kinda like in lua's string library
   extension (str: String)
-    /** Splits a string into subsequences based on a given separator (as opposed
-      * to sub-arrays for display purposes)
-      * @param s
-      *   separator
-      * @param filterEmp
-      *   whether to filter out empty subseqs
-      */
+    /**
+     * Splits a string into subsequences based on a given separator (as opposed to sub-arrays for display purposes)
+     * @param s separator
+     * @param filterEmp whether to filter out empty subseqs
+     */
     def ssplit(s: String, filterEmp: Boolean = true) =
       if filterEmp then str.split(s).filter(_.nonEmpty).toList
       else str.split(s).toSeq // allow me to actually view it
-    /** gets a substring with behavior similar to lua's string.sub, allowing for
-      * negative indices to represent indices from the end
-      *
-      * @param start
-      *   starting index of substring
-      * @param end
-      *   ending index of substring
-      */
+    /**
+     * gets a substring with behavior similar to lua's string.sub, allowing for negative indices to represent indices
+     * from the end
+     *
+     * @param start starting index of substring
+     * @param end ending index of substring
+     */
     inline def sub(start: Int, end: Int): String =
       val st = if start < 0 then str.length + start else start
-      val en = if end < 0 then str.length + end + 1 else end
+      val en = if end < 0   then str.length + end + 1 else end
       str.substring(st, en)
 
-    /** gets a substring starting from a particular index, allowing for negative
-      * indices to represent indices from the end
-      *
-      * @param start
-      *   starting index of substring
-      */
+    /**
+     * gets a substring starting from a particular index, allowing for negative indices to represent indices from the
+     * end
+     *
+     * @param start starting index of substring
+     */
     inline def sub(start: Int): String = sub(start, str.length)
     // convert str -> int or str -> Long using given radix
     def toLong             = java.lang.Long.parseLong(str)
@@ -139,32 +140,28 @@ object Utils:
     def toInt(radix: Int)  = Integer.parseInt(str, radix)
     def toDouble           = java.lang.Double.parseDouble(str)
 
-    /** apply used in context of charat
-      *
-      * @param i
-      *   index of char
-      * @return
-      *   character at given index
-      */
+    /**
+     * apply used in context of charat
+     *
+     * @param i index of char
+     * @return character at given index
+     */
     def apply(i: Int) = str.charAt(i)
 
-    /** apply used in context of "contains"
-      *
-      * @param c
-      *   character to check element relationship
-      * @return
-      *   whether the given character is contained within the string
-      */
+    /**
+     * apply used in context of "contains"
+     *
+     * @param c character to check element relationship
+     * @return whether the given character is contained within the string
+     */
     def apply(c: Char) = str.contains(c)
 
-    /** apply used in context of checking regex matching
-      *
-      * @param r
-      *   regex to match on string
-      * @return
-      *   either subgroups if any are present or whole matched string if there
-      *   are no capture groups
-      */
+    /**
+     * apply used in context of checking regex matching
+     *
+     * @param r regex to match on string
+     * @return either subgroups if any are present or whole matched string if there are no capture groups
+     */
     def apply(r: Regex) =
       r.findFirstMatchIn(str) map (m =>
         val sg = m.subgroups
@@ -172,44 +169,40 @@ object Utils:
         else sg
       ) getOrElse Nil
 
-    /** method for subgroup matching, DO NOT USE WITHOUT CAPTURE GROUPS
-      *
-      * @param reg
-      *   regex to match against
-      * @return
-      *   all matched subgroups
-      */
+    /**
+     * method for subgroup matching, DO NOT USE WITHOUT CAPTURE GROUPS
+     *
+     * @param reg regex to match against
+     * @return all matched subgroups
+     */
     def smatch(reg: String): Seq[String] =
       reg.r
         .findFirstMatchIn(str)
         .map(_.subgroups)
         .getOrElse(Seq())
 
-    /** finds first match for regex expr, but ignores captures, if you want to
-      * capture, use smatch
-      *
-      * @param reg
-      *   regex to match against
-      * @return
-      *   matched string
-      */
+    /**
+     * finds first match for regex expr, but ignores captures, if you want to capture, use smatch
+     *
+     * @param reg regex to match against
+     * @return matched string
+     */
     def fmatch(reg: String): String =
       reg.r
         .findFirstMatchIn(str)
         .map(_.matched)
         .getOrElse("")
+
     def findOrElse(reg: Regex, back: String): String =
       reg.findFirstIn(str).getOrElse(back)
 
-    /** global substitution using function mapping to substitute values
-      *
-      * @param reg
-      *   regex to match
-      * @param f
-      *   function to map
-      * @return
-      *   resultant string
-      */
+    /**
+     * global substitution using function mapping to substitute values
+     *
+     * @param reg regex to match
+     * @param f function to map
+     * @return resultant string
+     */
     def gsub(reg: Regex, f: Seq[String] => String) =
       reg.replaceAllIn(
         str,
@@ -241,44 +234,62 @@ object Utils:
           case _ => None
         }
       )
+    def gsub(reg: Regex, tbl: Map[String, String]) =
+      reg.replaceAllIn(
+        str,
+        m => tbl.getOrElse(m.matched, m.matched)
+      )
+    
+
+  // special map for counting elements in a sequence
+  opaque type Counter[T] = Map[T, Int]
+  extension [T](c: Counter[T]) def apply(t: T) = c.getOrElse(t, 0)
 
   extension [T](seq: Seq[T])
     // numerical reductions
     def sumBy[U: Numeric](f: T => U)  = seq.map(f).sum
     def prodBy[U: Numeric](f: T => U) = seq.map(f).product
-    // split by predicate or value
+
+    /** split by predicate */
     def splitBy(p: T => Boolean) = seq.foldLeft(Seq(Seq.empty[T])) {
       case (acc, s) if p(s) => acc :+ Seq.empty[T]
       case (acc, s)         => acc.init :+ (acc.last :+ s)
     }
+
+    /** split by value */
     def splitBy(v: T, filterEmp: Boolean = true): Seq[Seq[T]] =
       if filterEmp then seq.splitBy(_ == v).filter(_.nonEmpty)
       else seq.splitBy(_ == v)
-    // distinct, but not an iterator (so i don't forget the name)
+
+    /** distinct, but not an iterator (so i don't forget the name) */
     def unique = seq.distinct.toSeq
+
+    /** mimics python's Counter object */
+    def counter: Counter[T] = seq.groupMapReduce(identity)(_ => 1)(_ + _)
 
   extension [T](grid: Seq[Seq[T]])
     def columns: Seq[Seq[T]] =
       for i <- 0 until grid(0).length yield grid.map(_(i))
   extension (lines: Seq[String])
-    /** get character columns of a string
-      *
-      * @return
-      *   essentially transpose of the string
-      */
+    /**
+     * get character columns of a string
+     *
+     * @return essentially transpose of the string
+     */
     def chrCols = lines.map(_.toSeq).transpose.map(_.mkString)
 
   extension [T](arr: Array[Array[T]])
-    /** converts an array grid into viewable format
-      *
-      * @param sep
-      * @return
-      */
+    /**
+     * converts an array grid into viewable format
+     *
+     * @param sep separator between elements
+     * @return string representation of grid
+     */
     def str(sep: String = "") =
       arr.map(_.mkString("[", sep, "]")).mkString("\n")
 
-  // print to file; reduce clutter
-  inline def write(xs: Any*) =
+  /** print to file; reduce clutter in stdout */
+  def write(xs: Any*) =
     os.write.append(pwd / "POutput.txt", (xs mkString " ") + "\n")
 
   // GCD and LCM
@@ -308,8 +319,7 @@ object Utils:
     infix def +(that: Boolean) = i + (if that then 1 else 0)
     infix def -(that: Boolean) = i - (if that then 1 else 0)
 
-  /** inclusive random integer
-    */
+  /** inclusive random integer */
   def randInt(b1In: Int, b2In: Int) =
     val (mi, ma) = if b1In > b2In then (b2In, b1In) else (b1In, b2In)
     Random.between(mi, ma + 1)
@@ -327,9 +337,9 @@ object Utils:
       map(n) = arr.length - 1
       swim(arr.length - 1)
 
-    /** @return
-      *   element with lowest priority
-      */
+    /**
+     * @return element with lowest priority
+     */
     def top = arr(1)
 
     def pop: (T, Double) =
@@ -340,13 +350,12 @@ object Utils:
       sink(1)
       ret
 
-    /** decrease key (priority) of elem to new value
-      *
-      * @param n
-      *   element
-      * @param nDist
-      *   new priority
-      */
+    /**
+     * decrease key (priority) of elem to new value
+     *
+     * @param n element
+     * @param nDist new priority
+     */
     def decKey(n: T, nDist: Double): Unit =
       val i = map(n)
       arr(i) = (n, nDist)
@@ -439,26 +448,26 @@ object Utils:
       for j <- 0 until arr(0).length do
         val n = arr(i)(j)
         val neighs = Seq(
-          if i > 0 then Some((arr(i - 1)(j), 1.0)) else None,
-          if i < arr.length - 1 then Some((arr(i + 1)(j), 1.0)) else None,
-          if j > 0 then Some((arr(i)(j - 1), 1.0)) else None,
+          if i > 0                 then Some((arr(i - 1)(j), 1.0)) else None,
+          if i < arr.length - 1    then Some((arr(i + 1)(j), 1.0)) else None,
+          if j > 0                 then Some((arr(i)(j - 1), 1.0)) else None,
           if j < arr(0).length - 1 then Some((arr(i)(j + 1), 1.0)) else None
         ).flatten
         g.addEdges(n, neighs)
     g
-  def toWeightedDigraph(arr: Array[Array[Double]]): Digraph[(Int, Int)] =
+  def toWeightedDigraph(grid: Array[Array[Double]]): Digraph[(Int, Int)] =
     // constuct digraph between array elements and their 4 neighors in grid
     val g = Digraph[(Int, Int)]()
-    for i <- 0 until arr.length do
-      for j <- 0 until arr(0).length do
-        val n = (i, j)
-        val neighs = Seq(
-          if i > 0 then Some(((i - 1, j), arr(i - 1)(j))) else None,
-          if i < arr.length - 1 then Some(((i + 1, j), arr(i + 1)(j)))
-          else None,
-          if j > 0 then Some(((i, j - 1), arr(i)(j - 1))) else None,
-          if j < arr(0).length - 1 then Some(((i, j + 1), arr(i)(j + 1)))
-          else None
-        ).flatten
-        g.addEdges(n, neighs)
+    for
+      i <- 0 until grid.length
+      j <- 0 until grid(0).length
+      n = (i, j)
+    do
+      val neighs = Seq(
+        if i > 0                  then Some(((i - 1, j), grid(i - 1)(j))) else None,
+        if i < grid.length - 1    then Some(((i + 1, j), grid(i + 1)(j))) else None,
+        if j > 0                  then Some(((i, j - 1), grid(i)(j - 1))) else None,
+        if j < grid(0).length - 1 then Some(((i, j + 1), grid(i)(j + 1))) else None
+      ).flatten
+      g.addEdges(n, neighs)
     g
