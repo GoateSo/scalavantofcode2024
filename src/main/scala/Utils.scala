@@ -7,13 +7,18 @@ import scala.collection.mutable.{ArrayBuffer, HashMap}
 import os._
 import scala.compiletime.ops.string
 
-/**
- * collection of useful utility methods & shorthands
- */
+/** collection of useful utility methods & shorthands
+  */
 object Utils:
   type Bool = Boolean
   // alphanbetic regex shorthand
   val al = "[a-zA-Z]".r
+
+  // funky aahh implicit conversions
+  given strToInt: Conversion[String, Int] = _.toInt
+  given strToLong: Conversion[String, Long] = _.toLong
+  given strToBigInt: Conversion[String, BigInt] = BigInt(_)
+
   // interval/ range ops
   type Range = (Long, Long) | Unit
   import Range.*
@@ -49,9 +54,9 @@ object Utils:
             // left one TODO
             // right one
           )
-  final val empty: Range             = ()
+  final val empty: Range = ()
   def range(a: Long, b: Long): Range = if a > b then () else (a, b)
-  def range(a: Int, b: Int): Range   = if a > b then () else (a, b)
+  def range(a: Int, b: Int): Range = if a > b then () else (a, b)
 
   // surroundings of value in grid
   opaque type Surrounding <: Seq[(Int, Int)] = List[(Int, Int)]
@@ -69,7 +74,7 @@ object Utils:
     def bound(a: Int, b: Int): Surrounding =
       sur.filter((i, j) => i >= 0 && i < a && j >= 0 && j < b)
   // modulo using the sign of the divisor
-  extension (x: Int) def +%(y: Int)        = Math.floorMod(x, y)
+  extension (x: Int) def +%(y: Int) = Math.floorMod(x, y)
   extension (x: Long) def +%(y: Long): Int = Math.floorMod(x, y).toInt
 
   extension [T, U](p: (T, U))
@@ -78,16 +83,15 @@ object Utils:
   // exponentiation
   extension (n: Double) def **(m: Double) = Math.pow(n, m)
 
-  /**
-   * performs extended euclidean algorithm on a and b to find GCD
-   *
-   * @param a
-   *   integer input 1
-   * @param b
-   *   integer input 2
-   * @return
-   *   triplet (g,x,y) such that g = a*x + b*y
-   */
+  /** performs extended euclidean algorithm on a and b to find GCD
+    *
+    * @param a
+    *   integer input 1
+    * @param b
+    *   integer input 2
+    * @return
+    *   triplet (g,x,y) such that g = a*x + b*y
+    */
   def egcd(a: Int, b: Int): (Int, Int, Int) =
     if a == 0 then (b, 0, 1)
     else
@@ -97,48 +101,53 @@ object Utils:
     val (g, x, y) = egcd(a, m)
     if g == 1 then (x + m) % m else 0
 
+  def isPrime(n: BigInt): Boolean =
+    if n < 2 then return false
+    for i <- 2 to math.sqrt(n.toDouble).toInt do if n % i == 0 then return false
+    true
+
   // random string stuff kinda like in lua's string library
   extension (str: String)
+    def ssplit(s: String, filterEmp: Boolean = true) = 
+      if filterEmp then str.split(s).filter(_.nonEmpty).toList
+      else str.split(s).toSeq // allow me to actually view it
     inline def sub(start: Int, end: Int): String =
       val st = if start < 0 then str.length + start else start
       val en = if end < 0 then str.length + end + 1 else end
       str.substring(st, en)
     inline def sub(start: Int): String = sub(start, str.length)
     // convert str -> int or str -> Long using given radix
-    def toLong             = java.lang.Long.parseLong(str)
+    def toLong = java.lang.Long.parseLong(str)
     def toLong(radix: Int) = java.lang.Long.parseLong(str, radix)
-    def toInt              = Integer.parseInt(str)
-    def toInt(radix: Int)  = Integer.parseInt(str, radix)
+    def toInt = Integer.parseInt(str)
+    def toInt(radix: Int) = Integer.parseInt(str, radix)
 
-    /**
-     * apply used in context of charat
-     *
-     * @param i
-     *   index of char
-     * @return
-     *   character at given index
-     */
+    /** apply used in context of charat
+      *
+      * @param i
+      *   index of char
+      * @return
+      *   character at given index
+      */
     def apply(i: Int) = str.charAt(i)
 
-    /**
-     * apply used in context of "contains"
-     *
-     * @param c
-     *   character to check element relationship
-     * @return
-     *   whether the given character is contained within the string
-     */
+    /** apply used in context of "contains"
+      *
+      * @param c
+      *   character to check element relationship
+      * @return
+      *   whether the given character is contained within the string
+      */
     def apply(c: Char) = str.contains(c)
 
-    /**
-     * apply used in context of checking regex matching
-     *
-     * @param r
-     *   regex to match on string
-     * @return
-     *   either subgroups if any are present or whole matched string if there
-     *   are no capture groups
-     */
+    /** apply used in context of checking regex matching
+      *
+      * @param r
+      *   regex to match on string
+      * @return
+      *   either subgroups if any are present or whole matched string if there
+      *   are no capture groups
+      */
     def apply(r: Regex) =
       r.findFirstMatchIn(str) map (m =>
         val sg = m.subgroups
@@ -146,29 +155,27 @@ object Utils:
         else sg
       ) getOrElse Nil
 
-    /**
-     * method for subgroup matching, DO NOT USE WITHOUT CAPTURE GROUPS
-     *
-     * @param reg
-     *   regex to match against
-     * @return
-     *   all matched subgroups
-     */
+    /** method for subgroup matching, DO NOT USE WITHOUT CAPTURE GROUPS
+      *
+      * @param reg
+      *   regex to match against
+      * @return
+      *   all matched subgroups
+      */
     def smatch(reg: String): Seq[String] =
       reg.r
         .findFirstMatchIn(str)
         .map(_.subgroups)
         .getOrElse(Seq())
 
-    /**
-     * finds first match for regex expr, but ignores captures, if you want to
-     * capture, use smatch
-     *
-     * @param reg
-     *   regex to match against
-     * @return
-     *   matched string
-     */
+    /** finds first match for regex expr, but ignores captures, if you want to
+      * capture, use smatch
+      *
+      * @param reg
+      *   regex to match against
+      * @return
+      *   matched string
+      */
     def fmatch(reg: String): String =
       reg.r
         .findFirstMatchIn(str)
@@ -177,16 +184,15 @@ object Utils:
     def findOrElse(reg: Regex, back: String): String =
       reg.findFirstIn(str).getOrElse(back)
 
-    /**
-     * global substitution using function mapping to substitute values
-     *
-     * @param reg
-     *   regex to match
-     * @param f
-     *   function to map
-     * @return
-     *   resultant string
-     */
+    /** global substitution using function mapping to substitute values
+      *
+      * @param reg
+      *   regex to match
+      * @param f
+      *   function to map
+      * @return
+      *   resultant string
+      */
     def gsub(reg: Regex, f: Seq[String] => String) =
       reg.replaceAllIn(
         str,
@@ -221,14 +227,16 @@ object Utils:
 
   extension [T](seq: Seq[T])
     // numerical reductions
-    def sumBy[U: Numeric](f: T => U)  = seq.map(f).sum
+    def sumBy[U: Numeric](f: T => U) = seq.map(f).sum
     def prodBy[U: Numeric](f: T => U) = seq.map(f).product
     // split by predicate or value
     def splitBy(p: T => Boolean) = seq.foldLeft(Seq(Seq.empty[T])) {
       case (acc, s) if p(s) => acc :+ Seq.empty[T]
       case (acc, s)         => acc.init :+ (acc.last :+ s)
     }
-    def splitBy(v: T): Seq[Seq[T]] = splitBy(_ == v)
+    def splitBy(v: T, filterEmp: Boolean = true): Seq[Seq[T]] =
+      if filterEmp then seq.splitBy(_ == v).filter(_.nonEmpty)
+      else seq.splitBy(_ == v)
     // distinct, but not an iterator (so i don't forget the name)
     def unique = seq.distinct.toSeq
 
@@ -236,21 +244,19 @@ object Utils:
     def columns: Seq[Seq[T]] =
       for i <- 0 until grid(0).length yield grid.map(_(i))
   extension (lines: Seq[String])
-    /**
-     * get character columns of a string
-     *
-     * @return
-     *   essentially transpose of the string
-     */
+    /** get character columns of a string
+      *
+      * @return
+      *   essentially transpose of the string
+      */
     def chrCols = lines.map(_.toSeq).transpose.map(_.mkString)
 
   extension [T](arr: Array[Array[T]])
-    /**
-     * converts an array grid into viewable format
-     *
-     * @param sep
-     * @return
-     */
+    /** converts an array grid into viewable format
+      *
+      * @param sep
+      * @return
+      */
     def str(sep: String = "") =
       arr.map(_.mkString("[", sep, "]")).mkString("\n")
 
@@ -268,26 +274,25 @@ object Utils:
 
   // generalized integer statistics
   extension [T: Integral](xs: List[T])
-    def gcd    = xs.reduce(euclid)
-    def lcm    = xs.reduce((a, b) => a * b / euclid(a, b))
+    def gcd = xs.reduce(euclid)
+    def lcm = xs.reduce((a, b) => a * b / euclid(a, b))
     def median = xs.sorted.apply(xs.size / 2)
   extension (xs: List[Double]) def mean = xs.sum / xs.size
 
   // shorthands
   extension (i: Int)
-    def toBin                  = i.toBinaryString
-    def toHex                  = i.toHexString
+    def toBin = i.toBinaryString
+    def toHex = i.toHexString
     infix def +(that: Boolean) = i + (if that then 1 else 0)
     infix def -(that: Boolean) = i - (if that then 1 else 0)
   extension (i: Long)
-    def toBin                  = i.toBinaryString
-    def toHex                  = i.toHexString
+    def toBin = i.toBinaryString
+    def toHex = i.toHexString
     infix def +(that: Boolean) = i + (if that then 1 else 0)
     infix def -(that: Boolean) = i - (if that then 1 else 0)
 
-  /**
-   * inclusive random integer
-   */
+  /** inclusive random integer
+    */
   def randInt(b1In: Int, b2In: Int) =
     val (mi, ma) = if b1In > b2In then (b2In, b1In) else (b1In, b2In)
     Random.between(mi, ma + 1)
@@ -305,10 +310,9 @@ object Utils:
       map(n) = arr.length - 1
       swim(arr.length - 1)
 
-    /**
-     * @return
-     *   element with lowest priority
-     */
+    /** @return
+      *   element with lowest priority
+      */
     def top = arr(1)
 
     def pop: (T, Double) =
@@ -319,14 +323,13 @@ object Utils:
       sink(1)
       ret
 
-    /**
-     * decrease key (priority) of elem to new value
-     *
-     * @param n
-     *   element
-     * @param nDist
-     *   new priority
-     */
+    /** decrease key (priority) of elem to new value
+      *
+      * @param n
+      *   element
+      * @param nDist
+      *   new priority
+      */
     def decKey(n: T, nDist: Double): Unit =
       val i = map(n)
       arr(i) = (n, nDist)
@@ -346,8 +349,8 @@ object Utils:
         p /= 2
 
     private def sink(i: Int): Unit =
-      val l    = i * 2
-      val r    = l + 1
+      val l = i * 2
+      val r = l + 1
       var smol = i
       if l < arr.length && arr(l)._2 < arr(smol)._2 then smol = l
       if r < arr.length && arr(r)._2 < arr(smol)._2 then smol = r
@@ -365,7 +368,7 @@ object Utils:
     def bfs(start: T, f: T => Unit): Unit =
       import scala.collection.mutable.{Set, Queue}
       var visited = Set(start)
-      var queue   = Queue(start)
+      var queue = Queue(start)
       while queue.nonEmpty do
         val n = queue.dequeue()
         f(n)
@@ -377,7 +380,7 @@ object Utils:
     def dfs(start: T, f: T => Unit): Unit =
       import scala.collection.mutable.{Set, Stack}
       var visited = Set(start)
-      var stack   = Stack(start)
+      var stack = Stack(start)
       while stack.nonEmpty do
         val n = stack.pop()
         f(n)
@@ -387,7 +390,7 @@ object Utils:
             stack.push(e)
     def path(start: T, end: T): (Double, List[T]) =
       // perform dijkstra's algorithm on graph using minPQ from above
-      val dist  = HashMap[T, Double]()
+      val dist = HashMap[T, Double]()
       val prevs = HashMap[T, T]()
 
       def getPath(x: T): List[T] =
