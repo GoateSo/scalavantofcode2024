@@ -14,11 +14,6 @@ object Utils:
   // alphanbetic regex shorthand
   val al = "[a-zA-Z]".r
 
-  // funky aahh implicit conversions
-  given strToInt: Conversion[String, Int] = _.toInt
-  given strToLong: Conversion[String, Long] = _.toLong
-  given strToBigInt: Conversion[String, BigInt] = BigInt(_)
-
   // interval/ range ops
   type Range = (Long, Long) | Unit
   import Range.*
@@ -44,19 +39,18 @@ object Utils:
         if l1 > r2 || l2 > r1 then ()
         else Some(max(l1, l2), min(r1, r2))
     // subtract range from range -- possibly break into left and right (as a list)
-    infix def -(that: Range) = (r, that) match
+    infix def -(that: Range): List[Range] = (r, that) match
       case ((), _) => List(())
       case (_, ()) => List(r)
       case ((l1, r1), (l2, r2)) =>
         if l1 > r2 || l2 > r1 then List(r) // doesn't intersect
-        else
-          List(
-            // left one TODO
-            // right one
-          )
-  final val empty: Range = ()
+        else if l1 < l2 && r1 > r2 then List((l1, l2 - 1), (r2 + 1, r1))
+        else if l1 < l2 then List((l1, l2 - 1))
+        else if r1 > r2 then List((r2 + 1, r1))
+        else List(())
+  final val empty: Range             = ()
   def range(a: Long, b: Long): Range = if a > b then () else (a, b)
-  def range(a: Int, b: Int): Range = if a > b then () else (a, b)
+  def range(a: Int, b: Int): Range   = if a > b then () else (a, b)
 
   // surroundings of value in grid
   opaque type Surrounding <: Seq[(Int, Int)] = List[(Int, Int)]
@@ -74,7 +68,7 @@ object Utils:
     def bound(a: Int, b: Int): Surrounding =
       sur.filter((i, j) => i >= 0 && i < a && j >= 0 && j < b)
   // modulo using the sign of the divisor
-  extension (x: Int) def +%(y: Int) = Math.floorMod(x, y)
+  extension (x: Int) def +%(y: Int)        = Math.floorMod(x, y)
   extension (x: Long) def +%(y: Long): Int = Math.floorMod(x, y).toInt
 
   extension [T, U](p: (T, U))
@@ -108,19 +102,42 @@ object Utils:
 
   // random string stuff kinda like in lua's string library
   extension (str: String)
-    def ssplit(s: String, filterEmp: Boolean = true) = 
+    /** Splits a string into subsequences based on a given separator (as opposed
+      * to sub-arrays for display purposes)
+      * @param s
+      *   separator
+      * @param filterEmp
+      *   whether to filter out empty subseqs
+      */
+    def ssplit(s: String, filterEmp: Boolean = true) =
       if filterEmp then str.split(s).filter(_.nonEmpty).toList
       else str.split(s).toSeq // allow me to actually view it
+    /** gets a substring with behavior similar to lua's string.sub, allowing for
+      * negative indices to represent indices from the end
+      *
+      * @param start
+      *   starting index of substring
+      * @param end
+      *   ending index of substring
+      */
     inline def sub(start: Int, end: Int): String =
       val st = if start < 0 then str.length + start else start
       val en = if end < 0 then str.length + end + 1 else end
       str.substring(st, en)
+
+    /** gets a substring starting from a particular index, allowing for negative
+      * indices to represent indices from the end
+      *
+      * @param start
+      *   starting index of substring
+      */
     inline def sub(start: Int): String = sub(start, str.length)
     // convert str -> int or str -> Long using given radix
-    def toLong = java.lang.Long.parseLong(str)
+    def toLong             = java.lang.Long.parseLong(str)
     def toLong(radix: Int) = java.lang.Long.parseLong(str, radix)
-    def toInt = Integer.parseInt(str)
-    def toInt(radix: Int) = Integer.parseInt(str, radix)
+    def toInt              = Integer.parseInt(str)
+    def toInt(radix: Int)  = Integer.parseInt(str, radix)
+    def toDouble           = java.lang.Double.parseDouble(str)
 
     /** apply used in context of charat
       *
@@ -227,7 +244,7 @@ object Utils:
 
   extension [T](seq: Seq[T])
     // numerical reductions
-    def sumBy[U: Numeric](f: T => U) = seq.map(f).sum
+    def sumBy[U: Numeric](f: T => U)  = seq.map(f).sum
     def prodBy[U: Numeric](f: T => U) = seq.map(f).product
     // split by predicate or value
     def splitBy(p: T => Boolean) = seq.foldLeft(Seq(Seq.empty[T])) {
@@ -274,20 +291,20 @@ object Utils:
 
   // generalized integer statistics
   extension [T: Integral](xs: List[T])
-    def gcd = xs.reduce(euclid)
-    def lcm = xs.reduce((a, b) => a * b / euclid(a, b))
+    def gcd    = xs.reduce(euclid)
+    def lcm    = xs.reduce((a, b) => a * b / euclid(a, b))
     def median = xs.sorted.apply(xs.size / 2)
   extension (xs: List[Double]) def mean = xs.sum / xs.size
 
   // shorthands
   extension (i: Int)
-    def toBin = i.toBinaryString
-    def toHex = i.toHexString
+    def toBin                  = i.toBinaryString
+    def toHex                  = i.toHexString
     infix def +(that: Boolean) = i + (if that then 1 else 0)
     infix def -(that: Boolean) = i - (if that then 1 else 0)
   extension (i: Long)
-    def toBin = i.toBinaryString
-    def toHex = i.toHexString
+    def toBin                  = i.toBinaryString
+    def toHex                  = i.toHexString
     infix def +(that: Boolean) = i + (if that then 1 else 0)
     infix def -(that: Boolean) = i - (if that then 1 else 0)
 
@@ -349,8 +366,8 @@ object Utils:
         p /= 2
 
     private def sink(i: Int): Unit =
-      val l = i * 2
-      val r = l + 1
+      val l    = i * 2
+      val r    = l + 1
       var smol = i
       if l < arr.length && arr(l)._2 < arr(smol)._2 then smol = l
       if r < arr.length && arr(r)._2 < arr(smol)._2 then smol = r
@@ -368,7 +385,7 @@ object Utils:
     def bfs(start: T, f: T => Unit): Unit =
       import scala.collection.mutable.{Set, Queue}
       var visited = Set(start)
-      var queue = Queue(start)
+      var queue   = Queue(start)
       while queue.nonEmpty do
         val n = queue.dequeue()
         f(n)
@@ -380,7 +397,7 @@ object Utils:
     def dfs(start: T, f: T => Unit): Unit =
       import scala.collection.mutable.{Set, Stack}
       var visited = Set(start)
-      var stack = Stack(start)
+      var stack   = Stack(start)
       while stack.nonEmpty do
         val n = stack.pop()
         f(n)
@@ -390,7 +407,7 @@ object Utils:
             stack.push(e)
     def path(start: T, end: T): (Double, List[T]) =
       // perform dijkstra's algorithm on graph using minPQ from above
-      val dist = HashMap[T, Double]()
+      val dist  = HashMap[T, Double]()
       val prevs = HashMap[T, T]()
 
       def getPath(x: T): List[T] =
