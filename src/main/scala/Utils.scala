@@ -71,8 +71,8 @@ object Utils:
       sur.filter((i, j) => i >= 0 && i < a && j >= 0 && j < b)
 
   // modulo using the sign of the divisor
-  extension (x: Int) def +%(y: Int)        = Math.floorMod(x, y)
-  extension (x: Long) def +%(y: Long): Int = Math.floorMod(x, y).toInt
+  extension (x: Int) def +%(y: Int)   = Math.floorMod(x, y)
+  extension (x: Long) def +%(y: Long) = Math.floorMod(x, y)
 
   extension [T, U, V, W](p: (T, U)) def bimap(f: T => V, g: U => W) = (f(p._1), g(p._2))
 
@@ -239,7 +239,6 @@ object Utils:
         str,
         m => tbl.getOrElse(m.matched, m.matched)
       )
-    
 
   // special map for counting elements in a sequence
   opaque type Counter[T] = Map[T, Int]
