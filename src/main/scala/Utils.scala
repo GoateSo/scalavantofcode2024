@@ -6,6 +6,7 @@ import scala.util.matching.Regex.Match
 import scala.collection.mutable.{ArrayBuffer, HashMap}
 import os._
 import scala.compiletime.ops.string
+import scala.reflect.ClassTag
 
 /**
  * collection of useful utility methods & shorthands
@@ -266,6 +267,25 @@ object Utils:
     /** mimics python's Counter object */
     def counter: Counter[T] = seq.groupMapReduce(identity)(_ => 1)(_ + _)
 
+  // similar to seqs, except for arrays
+  extension [T: ClassTag](arr: Array[T])
+    // numerical reductions
+    def sumBy[U: Numeric: ClassTag](f: T => U) =
+      val num = summon[Numeric[U]]
+      arr.foldLeft(num.zero)((acc, v) => num.plus(acc, f(v)))
+    def prodBy[U: Numeric: ClassTag](f: T => U) =
+      val num = summon[Numeric[U]]
+      arr.foldLeft(num.zero)((acc, v) => num.times(acc, f(v)))
+    // split by predicate or value
+    def splitBy(p: T => Boolean) = arr.foldLeft(Seq(Seq.empty[T])) {
+      case (acc, s) if p(s) => acc :+ Seq.empty[T]
+      case (acc, s)         => acc.init :+ (acc.last :+ s)
+    }
+    def splitBy(v: T): Seq[Seq[T]] = splitBy(_ == v)
+    // distinct, but not an iterator (so i don't forget the name)
+    def unique = arr.distinct.toSeq
+    def display = arr.mkString("[", ", ", "]")
+
   extension [T](grid: Seq[Seq[T]])
     def columns: Seq[Seq[T]] =
       for i <- 0 until grid(0).length yield grid.map(_(i))
@@ -331,6 +351,8 @@ object Utils:
     override def toString =
       arr.mkString("[", ",", "]") ++ "\n" ++ map.mkString("[", ",", "]")
 
+    def isEmpty  = arr.size <= 1
+    def nonEmpty = arr.size > 1
     def +=(n: T, priority: Double): Unit =
       arr += ((n, priority))
       map(n) = arr.length - 1
@@ -384,7 +406,7 @@ object Utils:
         sink(smol)
   end MinPq
   // digraph with weights
-  class Digraph[T] {
+  class Digraph[T]:
     var adj = HashMap[T, Set[(T, Double)]]()
     def addEdge(from: T, to: T, weight: Double = 1) =
       adj(from) = adj.getOrElse(from, Set.empty[(T, Double)]) + ((to, weight))
@@ -439,7 +461,7 @@ object Utils:
     override def toString(): String = adj.mkString("\n")
 
     // def pathNeg(start : T, end : T)
-  }
+  end Digraph
   def toDigraph[T](arr: Array[Array[T]]): Digraph[T] =
     // constuct digraph between array elements and their 4 neighors in grid
     val g = Digraph[T]()
@@ -470,3 +492,54 @@ object Utils:
       ).flatten
       g.addEdges(n, neighs)
     g
+
+  // discrete ranges, so ((1, 5), (6, 7)) -> (1,7)
+  // possibly turn into an interval tree down the line
+  class Ranges(intervals: (Int, Int)*):
+    private var internal_arr =
+      intervals.to(ArrayBuffer)
+    internal_arr.sortInPlaceBy(_._1)
+    internal_sort()
+    // subtract range from collection of intervals
+    def -(range: (Int, Int)) =
+      if internal_arr.isEmpty then this
+      else
+        val (rl, rr)    = range
+        var (narr, rem) = internal_arr.span(_._2 < rl)
+        boundary:
+          while rem.nonEmpty do
+            val (l, r) = rem.remove(0)
+            if l < rl then narr.addOne((l, math.min(rl - 1, r)))
+            if r > rr then
+              narr.addOne((math.max(rr + 1, l), r))
+              break()
+            rem.dropWhileInPlace((l, r) => r <= rr && l >= rl)
+        Ranges(narr.toSeq*)
+
+    def |(that: Ranges) =
+      val cpy = internal_arr.clone()
+      cpy.appendAll(that.internal_arr)
+      Ranges(cpy.toSeq*)
+
+    def +(range: (Int, Int)) =
+      val cpy = internal_arr.clone()
+      cpy.prepend(range)
+      Ranges(cpy.toSeq*)
+
+    def count: Int =
+      internal_arr.map((l, r) => r - l + 1).sum
+
+    override def toString(): String =
+      internal_arr.mkString("Ranges[", ", ", "]")
+
+    private def internal_sort() =
+      if internal_arr.nonEmpty then
+        val narr = ArrayBuffer[(Int, Int)]()
+        narr.addOne(internal_arr.head)
+        for (i, j) <- internal_arr.tail if i <= j do
+          val (pi, pj) = narr.remove(narr.size - 1)
+          if pj < i - 1 then narr ++= List((pi, pj), (i, j))
+          else narr ++= List((pi, math.max(pj, j)))
+        internal_arr = narr
+  end Ranges
+end Utils
