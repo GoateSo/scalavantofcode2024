@@ -188,58 +188,53 @@ object Utils:
      * @param reg regex to match against
      * @return matched string
      */
-    def fmatch(reg: String): String =
-      reg.r
+    def fmatch(regpat: String): String =
+      regpat.r
         .findFirstMatchIn(str)
         .map(_.matched)
         .getOrElse("")
 
-    def findOrElse(reg: Regex, back: String): String =
-      reg.findFirstIn(str).getOrElse(back)
+    def findOrElse(regpat: String, back: String): String =
+      regpat.r.findFirstIn(str).getOrElse(back)
 
     /**
-     * global substitution using function mapping to substitute values
+     * replaces all instances of a regex pattern with a given string if a pattern has no capture groups, the entire
+     * match is replaced
      *
-     * @param reg regex to match
-     * @param f function to map
-     * @return resultant string
+     * @param regpat regex pattern to match
+     * @param f function to apply to matched groups
+     * @return string with all instances of regpat replaced
      */
-    def gsub(reg: Regex, f: Seq[String] => String) =
-      reg.replaceAllIn(
-        str,
-        _ match {
-          case reg(xs*) => f(xs)
-        }
-      )
-    def gsub(reg: Regex, f: Seq[String] => String, times: Int) =
+    def gsub(regpat: String, f: Match => String) =
+      regpat.r.replaceAllIn(str, f)
+
+    def gsub(regpat: String, f: Match => String, times: Int) =
       var occurs = 0
+      val reg    = regpat.r
       reg.replaceSomeIn(
         str,
-        _ match {
-          case reg(xs*) if occurs < times =>
+        m =>
+          if occurs < times then
             occurs += 1
-            Some(f(xs))
-          case _ => None
-        }
+            Some(f(m))
+          else None
       )
     def gsub(reg: Regex, rep: String) =
       reg.replaceAllIn(str, rep)
+
     def gsub(reg: Regex, rep: String, times: Int) =
       var occurs = 0
       reg.replaceSomeIn(
         str,
         _ match {
-          case reg(_*) if occurs < times =>
+          case _ if occurs < times =>
             occurs += 1
             Some(rep)
           case _ => None
         }
       )
     def gsub(reg: Regex, tbl: Map[String, String]) =
-      reg.replaceAllIn(
-        str,
-        m => tbl.getOrElse(m.matched, m.matched)
-      )
+      reg.replaceSomeIn(str, m => tbl.get(m.matched))
 
   // special map for counting elements in a sequence
   opaque type Counter[T] = Map[T, Int]
@@ -283,7 +278,7 @@ object Utils:
     }
     def splitBy(v: T): Seq[Seq[T]] = splitBy(_ == v)
     // distinct, but not an iterator (so i don't forget the name)
-    def unique = arr.distinct.toSeq
+    def unique  = arr.distinct.toSeq
     def display = arr.mkString("[", ", ", "]")
 
   extension [T](grid: Seq[Seq[T]])
