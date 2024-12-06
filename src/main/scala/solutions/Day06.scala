@@ -49,27 +49,29 @@ class Day06(input: Seq[String], isSample: Boolean) extends Solution(input, isSam
           cj = nj
       break(false)
 
+  
+  val part1Vis = HashSet[(Int, Int)]()
+
   override def run =
-    val vis = HashSet[(Int, Int)]()
     boundary:
       var ci = start._1
       var cj = start._2
       var cd = startdir
       while true do
-        vis.add((ci, cj))
+        part1Vis.add((ci, cj))
         val (ni, nj) = (ci + cd._1, cj + cd._2)
         if ni < 0 || ni >= n || nj < 0 || nj >= m then break() // escape
         if input(ni)(nj) == '#'                   then cd = rotRight(cd)
         else
           ci = ni
           cj = nj
-    vis.size // total encountered
+    part1Vis.size // total encountered
 
   override def run2 =
     val cands = for
       i <- 0 until n
       j <- 0 until m
-      if input(i)(j) != '#' && !vs(input(i)(j))
+      if input(i)(j) != '#' && !vs(input(i)(j)) && part1Vis((i, j))
     yield
       val newGrid = input.updated(i, input(i).updated(j, '#'))
       if isLoop(start, startdir, newGrid) then Some(1) else None
