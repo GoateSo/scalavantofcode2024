@@ -26,4 +26,4 @@ inline def test(day: (Seq[String], Boolean) => Solution) =
   output(day(os.read.lines(pwd / "input.txt"), false))
 
 @main def main: Unit =
-  test(Day06.apply(_, _))
+  test(Day08.apply(_, _))
