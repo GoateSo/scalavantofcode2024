@@ -7,11 +7,16 @@ import scala.collection.mutable.{ArrayBuffer, HashMap}
 import os._
 import scala.compiletime.ops.string
 import scala.reflect.ClassTag
+// import math.Numeric.Implicits.infixNumericOps
+import math.Fractional.Implicits.infixFractionalOps
 
 /**
  * collection of useful utility methods & shorthands
  */
 object Utils:
+
+  import math.Integral.Implicits.infixIntegralOps
+
   type Bool = Boolean
   // alphanbetic regex shorthand
   val al = "[a-zA-Z]".r
@@ -262,6 +267,9 @@ object Utils:
     /** mimics python's Counter object */
     def counter: Counter[T] = seq.groupMapReduce(identity)(_ => 1)(_ + _)
 
+    def permute(n: Int) =
+      seq.combinations(n).flatMap(_.permutations)
+
   // similar to seqs, except for arrays
   extension [T: ClassTag](arr: Array[T])
     // numerical reductions
@@ -284,6 +292,7 @@ object Utils:
   extension [T](grid: Seq[Seq[T]])
     def columns: Seq[Seq[T]] =
       for i <- 0 until grid(0).length yield grid.map(_(i))
+    def bounds: (Int, Int) = (grid.length, grid(0).length)
   extension (lines: Seq[String])
     /**
      * get character columns of a string
@@ -307,7 +316,6 @@ object Utils:
     os.write.append(pwd / "POutput.txt", (xs mkString " ") + "\n")
 
   // GCD and LCM
-  import math.Integral.Implicits.infixIntegralOps
   def euclid[T: Integral](x: T, y: T): T =
     if y == 0
     then x
@@ -321,6 +329,13 @@ object Utils:
     def median = xs.sorted.apply(xs.size / 2)
   extension (xs: List[Double]) def mean = xs.sum / xs.size
 
+  // tupled arithmetic operations
+  extension [T: Integral](p1: (T, T))
+    def +(p2: (T, T)) = (p1._1 + p2._1, p1._2 + p2._2)
+    def -(p2: (T, T)) = (p1._1 - p2._1, p1._2 - p2._2)
+    def *(p2: T)      = (p1._1 * p2, p1._2 * p2)
+  extension [T: Fractional](p1: (T, T)) def /(p2: (T, T)) = (p1._1 / p2._1, p1._2 / p2._2)
+  extension [T: Integral](a: T) def dot(p: (T, T))        = (a * p._1, a * p._2)
   // shorthands
   extension (i: Int)
     def toBin                  = i.toBinaryString
