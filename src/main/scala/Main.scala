@@ -3,8 +3,10 @@ import scala.io.AnsiColor.*
 import os.*
 import utils.Utils
 import fastparse.internal.Util
-import fansi.Color.{Green, Red, Blue}
+import fansi.Color.{Green, Red, Blue, Yellow}
 import fansi.{Underlined, Bold}
+import java.util.Timer
+import java.time.LocalTime
 
 def emph(s: String) =
   Blue(s).overlay(Underlined.On).overlay(Bold.On)
@@ -26,4 +28,7 @@ inline def test(day: (Seq[String], Boolean) => Solution) =
   output(day(os.read.lines(pwd / "input.txt"), false))
 
 @main def main: Unit =
-  test(Day09.apply(_, _))
+  val t1 = System.nanoTime()
+  test(Day06.apply(_, _))
+  val t2 = System.nanoTime()
+  println(Yellow(s"Time: ${(t2 - t1) / 1000000}ms"))

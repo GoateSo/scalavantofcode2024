@@ -15,20 +15,15 @@ class Day06(input: Seq[String], isSample: Boolean) extends Solution(input, isSam
   )
 
   def rotRight(dir: (Int, Int)) = dir match
-    case (-1, 0) => (0, 1)
-    case (1, 0)  => (0, -1)
-    case (0, -1) => (-1, 0)
-    case (0, 1)  => (1, 0)
+    case (a, b) => (b, -a)
 
-  val vs = Set("^", "v", "<", ">").map(_(0))
-
-  val lig = for
+  val vs = dmap.keySet.map(_(0))
+  val slist = for
     i <- 0 until n
     j <- 0 until m
     if vs(input(i)(j))
   yield (i, j)
-
-  val start    = lig(0)
+  val start    = slist(0)
   val v        = input(start._1)(start._2)
   val startdir = dmap(v.toString)
 
@@ -49,9 +44,8 @@ class Day06(input: Seq[String], isSample: Boolean) extends Solution(input, isSam
           cj = nj
       break(false)
 
-  
   val part1Vis = HashSet[(Int, Int)]()
-
+  // find total # of encountered cells before escaping bounds
   override def run =
     boundary:
       var ci = start._1
@@ -67,6 +61,7 @@ class Day06(input: Seq[String], isSample: Boolean) extends Solution(input, isSam
           cj = nj
     part1Vis.size // total encountered
 
+  // found number of places where loop is formed by inserting a wall
   override def run2 =
     val cands = for
       i <- 0 until n

@@ -4,7 +4,7 @@ class Day03(input: Seq[String], isSample: Boolean) extends Solution(input, isSam
   val regex = "mul\\(\\d+,\\d+\\)|do(?:n't)?".r
 
   def simulate(f: (Boolean, Int) => Int) =
-    input.flatMap(regex.findAllMatchIn).foldLeft((0, true)) { case ((n, good), m) =>
+    input.flatMap(regex.findAllMatchIn).foldLeft(0, true) { case ((n, good), m) =>
       m.matched match
         case "do"          => (n, true)
         case "don't"       => (n, false)

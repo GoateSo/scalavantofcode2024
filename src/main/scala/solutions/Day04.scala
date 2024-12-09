@@ -7,28 +7,25 @@ class Day04(input: Seq[String], isSample: Boolean) extends Solution(input, isSam
   val m = input(0).size
 
   def hasXmas(input: Seq[String], i: Int, j: Int, di: Int, dj: Int): Boolean =
-    boundary:
-      for v <- 0 to 3 do
-        val ni = i + di * v
-        val nj = j + dj * v
-        if ni < 0 || ni >= n || nj < 0 || nj >= m then break(false)
-        if input(ni)(nj) != "XMAS" (v)            then break(false)
-      true
+    (0 to 3).forall: v =>
+      val ni = i + di * v
+      val nj = j + dj * v
+      input.applyOrElse(ni, _ => "").applyOrElse(nj, _ => '.') == "XMAS".charAt(v)
 
   override def run =
     val xmases = for
       i        <- 0 until n
       j        <- 0 until m
       (di, dj) <- surrounding(0, 0)
-      if hasXmas(input, i, j, di, dj) 
+      if hasXmas(input, i, j, di, dj)
     yield 1
-    xmases.sum
+    xmases.size
 
   val set = Set('M', 'A', 'S')
   def diagMas(xs: Seq[Seq[Char]]): Boolean =
     val d1 = Set(xs(0)(0), xs(1)(1), xs(2)(2))
     val d2 = Set(xs(0)(2), xs(1)(1), xs(2)(0))
-    d1 == set && d2 == set && xs(1)(1) == 'A'
+    d1 == set && d2 == set
 
   override def run2 =
     val xmases = for

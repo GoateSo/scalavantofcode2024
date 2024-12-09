@@ -11,7 +11,6 @@ class Day02(input: Seq[String], isSample: Boolean) extends Solution(input, isSam
     nums.count(good)
 
   override def run2 =
-    nums
-      .filter: lvl =>
-        (1 to lvl.size + 1).map(n => lvl.take(n - 1) ++ lvl.drop(n)).exists(good)
-      .size
+    // +1 for case where whole list is used
+    nums.count: lvl =>
+      (1 to lvl.size + 1).map(n => lvl.take(n - 1) ++ lvl.drop(n)).exists(good)
