@@ -293,6 +293,30 @@ object Utils:
     def columns: Seq[Seq[T]] =
       for i <- 0 until grid(0).length yield grid.map(_(i))
     def bounds: (Int, Int) = (grid.length, grid(0).length)
+
+    def gridbfs[U](
+        start: (Int, Int),
+        perRun: (Int, Int, Int) => Unit,
+        processVis: (Map[(Int, Int), Int]) => U,
+        neighborFilter: ((Int, Int), (Int, Int)) => Bool = (_, _) => true,
+        getNeighbors: (Int, Int) => Surrounding = neighbors,
+        visOverride: (Int, Int) => Bool = (i, j) => false
+    ): U =
+      import scala.collection.mutable.{HashMap, Queue}
+      val (n, m)  = (grid.length, grid(0).length)
+      var visited = HashMap(start -> 1)
+      var queue   = Queue((start._1, start._2, 0))
+      while queue.nonEmpty do
+        val (x, y, d) = queue.dequeue()
+        perRun(x, y, d)
+        for
+          (i, j) <- getNeighbors(x, y).bound(n, m)
+          if neighborFilter((x, y), (i, j))
+          if visOverride(i, j) || !visited.contains((i, j))
+        do
+          visited.put((i, j), visited.getOrElse((i, j), 0) + 1)
+          queue.enqueue((i, j, d + 1))
+      processVis(visited.toMap)
   extension (lines: Seq[String])
     /**
      * get character columns of a string

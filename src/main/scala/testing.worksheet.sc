@@ -1,31 +1,46 @@
 import utils.Utils.*
 import math.*
-import os.* 
-// var fname = "sample.txt"
-val fname = "input.txt"
+import os.*
+import scala.collection.mutable.{Queue, HashSet}
+os.write.over(pwd / "POutput.txt", "")
+
+var fname = "sample.txt"
+fname = "input.txt"
 
 val lines = os.read.lines(os.pwd / fname)
+val n     = lines.length
+val m     = lines(0).length
 
-val xss = lines.map(_.ssplit(" ").map(_.toInt))
+def search(a: Int, b: Int, repeat: Bool): Int =
+  val vis = HashSet[(Int, Int)]()
+  val q   = Queue[(Int, Int)]()
+  var res = 0
+  q.enqueue((a, b))
+  var rating = 1
+  while q.nonEmpty do
+    val (x, y) = q.dequeue()
+    if lines(x)(y) == '9' then res += 1
+    for
+      (i, j) <- neighbors(x, y).bound(n, m)
+      if lines(i)(j) - lines(x)(y) == 1
+      if repeat || !vis((i, j))
+    do
+      vis.add((i, j))
+      q.enqueue((i, j))
+  res
 
-// val s1 = xss.filter(xs =>
-//     xs.sorted == xs || xs.sorted == xs.reverse
-// ).filter(xs =>
-//     xs.sliding(2).forall(ys => abs(ys(0) - ys(1)) > 0 && abs(ys(0) - ys(1)) < 4)
-// ).length
-// List(1,2,3).sliding(2).toList
+var cntn = 0
 
-val s1 = xss.map(
-    xs => (xs +: (1 to xs.length).map(n => xs.take(n-1) ++ xs.drop(n))).filter(
-        l => l.sorted == l || l.sorted == l.reverse
-    ).filter(
-        l => l.sliding(2).forall(ys => abs(ys(0) - ys(1)) > 0 && abs(ys(0) - ys(1)) < 4)
-    ).size
-    // .filter(
-    //     l => l.sliding(2).forall(ys => 
-    //         println(ys)
-    //         abs(ys(0) - ys(1)) > 0 && abs(ys(0) - ys(1)) < 4)
-    // )
+val p1 = for
+  i <- 0 until lines.length
+  j <- 0 until lines(i).length
+  if lines(i)(j) == '0'
+yield search(i, j, false)
+p1.sum
 
-).count(x => x > 0)
-// s1.mkString("\n")
+val p2 = for
+  i <- 0 until lines.length
+  j <- 0 until lines(i).length
+  if lines(i)(j) == '0'
+yield search(i, j, true)
+p2.sum
